@@ -462,7 +462,12 @@ void handleResetButton() {
         tracker.clearSavedBaseline();
         tracker.resetCalibration();
         resetBtnActive = false;
-        Serial.println("[BTN]  Reset (counts + baseline cleared — recalibrating)");
+        Serial.println("[BTN]  Reset — clear the doorway!");
+        for (int i = 10; i > 0; i--) {
+            Serial.printf("[BTN]  Calibrating in %d …\n", i);
+            delay(1000);
+        }
+        Serial.println("[BTN]  Calibrating now");
     }
 }
 

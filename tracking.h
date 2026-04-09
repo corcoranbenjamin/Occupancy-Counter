@@ -31,9 +31,6 @@
 //
 // Two people walking through back-to-back create two separate blobs and
 // two independent tracks, so both crossings count correctly.
-//
-// When two blobs briefly merge into one (shoulders), MERGE_HOLD freezes updates
-// so unmatched tracks are not evaluated mid-merge.
 // ============================================================================
 
 // Sentinel value meaning "no valid distance reading" in the min-filter buffer.
@@ -88,7 +85,6 @@ public:
         for (int t = 0; t < MAX_TRACKS; t++)
             _tracks[t].active = false;
         _num_blobs       = 0;
-        _merge_run_len   = 0;
         memset(baseline, 0, sizeof(baseline));
         calibrated       = false;
         _calib_count     = 0;
@@ -182,7 +178,6 @@ public:
             _tracks[t].active = false;
         num_tracks      = 0;
         tracking_active = false;
-        _merge_run_len  = 0;
     }
 
     void resetTracking() {
@@ -190,7 +185,6 @@ public:
             _tracks[t].active = false;
         num_tracks      = 0;
         tracking_active = false;
-        _merge_run_len  = 0;
     }
 
 private:
@@ -202,7 +196,7 @@ private:
     uint8_t  _filter_idx;
 
     // --- blob detection scratch --------------------------------------------
-    struct Blob { float row, col; int cells; };
+    struct Blob { float row, col; };
     Blob     _blobs[MAX_BLOBS];
     int      _num_blobs;
     bool     _visited[64];
@@ -224,9 +218,6 @@ private:
     int      _calib_count;
     int32_t  _calib_accum[64];
     int      _calib_n[64];
-
-    // --- short merge (two tracks, one blob) --------------------------------
-    uint8_t  _merge_run_len;
 
     // --- helpers -----------------------------------------------------------
 
@@ -299,9 +290,8 @@ private:
             }
 
             if (cnt >= (int)MIN_BLOB_SIZE) {
-                _blobs[_num_blobs].row   = rsum / cnt;
-                _blobs[_num_blobs].col   = csum / cnt;
-                _blobs[_num_blobs].cells = cnt;
+                _blobs[_num_blobs].row = rsum / cnt;
+                _blobs[_num_blobs].col = csum / cnt;
                 _num_blobs++;
             }
         }
@@ -309,25 +299,6 @@ private:
 
     // --- multi-target track update -----------------------------------------
     void _updateTracks() {
-        int n_active = 0;
-        for (int t = 0; t < MAX_TRACKS; t++)
-            if (_tracks[t].active) n_active++;
-
-        bool freeze_merge = false;
-        if (n_active >= 2 && _num_blobs == 1 && _blobs[0].cells >= MERGE_MIN_BLOB_CELLS) {
-            if (_merge_run_len < MERGE_HOLD_MAX_FRAMES) {
-                freeze_merge = true;
-                _merge_run_len++;
-            } else
-                _merge_run_len = 0;
-        } else
-            _merge_run_len = 0;
-
-        if (freeze_merge) {
-            _publishPrimaryTrack();
-            return;
-        }
-
         bool blobTaken[MAX_BLOBS]   = {};
         bool trackMatched[MAX_TRACKS] = {};
 

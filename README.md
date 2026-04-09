@@ -85,17 +85,16 @@ Each frame at ~15 Hz runs through this pipeline:
 2. **Min-distance filter** — rolling minimum over the last 3 frames per cell, reducing multipath noise (UM2600 §6.2)
 3. **Occupied mask** — a cell is occupied if its filtered distance is above `DETECT_FLOOR_MM` (100 mm), below `DETECT_CEILING_MM` (1000 mm), and after calibration at least `STATIC_MARGIN_MM` (100 mm) shorter than its baseline
 4. **BFS blob detection** — flood-fill finds connected clusters of occupied cells; blobs smaller than `MIN_BLOB_SIZE` (2 cells) are discarded
-5. **Merge-hold** — when ≥2 active tracks collapse to 1 large blob (e.g. two people passing shoulder-to-shoulder), association freezes for up to 12 frames to prevent false crossings
-6. **Greedy association** — each blob is matched to its nearest existing track by centroid distance (within 3.0 grid cells)
-7. **Track expiry** — unmatched tracks accumulate misses; after a grace period (5 frames) or total timeout (90 frames), the track is evaluated
-8. **Spawn** — unmatched blobs become new tracks
-9. **Direction evaluation** — `shift = last_row − enter_row`; if the shift exceeds 1.5 rows and the track lived for ≥3 frames, the direction relative to `ENTRY_DIR` determines entry vs exit; occupancy is incremented or decremented accordingly
+5. **Greedy association** — each blob is matched to its nearest existing track by centroid distance (within 3.0 grid cells)
+6. **Track expiry** — unmatched tracks accumulate misses; after a grace period (5 frames) or total timeout (90 frames), the track is evaluated
+7. **Spawn** — unmatched blobs become new tracks
+8. **Direction evaluation** — `shift = last_row − enter_row`; if the shift exceeds 1.5 rows and the track lived for ≥3 frames, the direction relative to `ENTRY_DIR` determines entry vs exit; occupancy is incremented or decremented accordingly
 
 ### Calibration & Baseline Persistence
 
 On first boot the sensor averages 30 frames (~2 s) of the empty doorway to learn a per-cell baseline. This baseline is saved to ESP32 NVS flash. On subsequent boots (including wake from deep sleep) the baseline is restored automatically — no recalibration delay.
 
-Holding the reset button for 2 seconds clears the saved baseline, resets all counters, and forces a fresh calibration.
+Holding the reset button for 2 seconds clears the saved baseline, resets all counters, and starts a 10-second countdown so you can clear the doorway before calibration begins.
 
 ### Sleep Schedule
 
@@ -165,8 +164,6 @@ All compile-time constants are in `config.h`.
 | `MIN_CENTROID_SHIFT` | 1.5 | Min row shift to count as a crossing |
 | `MISS_GRACE_FRAMES` | 5 | Frames to tolerate dropout (~333 ms) |
 | `ENTRY_DIR` | -1 | Row direction that counts as entry |
-| `MERGE_HOLD_MAX_FRAMES` | 12 | Max freeze during blob merge (~800 ms) |
-| `MERGE_MIN_BLOB_CELLS` | 6 | Min blob size to trigger merge-hold |
 | `MIN_FILTER_DEPTH` | 3 | Rolling min-filter window (frames) |
 
 ### Calibration
@@ -211,7 +208,7 @@ All compile-time constants are in `config.h`.
 | `[SHEET]` | Upload result | `[SHEET] OK — occ:1  in:3  out:2  heap:177536` |
 | `[SD]` | SD card | `[SD] Card mounted — 7640MB` |
 | `[SLEEP]` | Sleep events | `[SLEEP] 21:30 — time to sleep` |
-| `[BTN]` | Button reset | `[BTN] Reset (counts + baseline cleared — recalibrating)` |
+| `[BTN]` | Button reset | `[BTN] Reset — clear the doorway!` |
 
 ---
 

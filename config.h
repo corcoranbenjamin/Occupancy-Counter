@@ -65,12 +65,6 @@
 #define MISS_GRACE_FRAMES     5     // frames to tolerate track dropout (~333 ms at 15 Hz)
 #define ENTRY_DIR             -1    // 1 = row-increasing = entry, -1 = row-decreasing = entry
 
-// Brief blob merge (e.g. two people shoulder-to-shoulder): one BFS blob but 2 tracks active.
-// Freeze association + miss counting for up to this many frames so neither track "expires"
-// into a bogus entry/exit. After this, resume normal behavior (~800 ms at 15 Hz).
-#define MERGE_HOLD_MAX_FRAMES 12
-#define MERGE_MIN_BLOB_CELLS  6     // merged silhouette; avoids hold on tiny single-person blobs
-
 // ============================================================================
 // Min-distance filter (UM2600 §6.2)
 // ============================================================================
