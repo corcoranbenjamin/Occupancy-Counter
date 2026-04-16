@@ -1,16 +1,18 @@
 // ============================================================================
-// Occupancy Counter — VL53L5CX + ESP32-C3 + eduroam + Google Sheets
+// Occupancy Counter — VL53L5CX + ESP32-C6 + eduroam + Google Sheets
 // ============================================================================
 //
-// Multi-blob tracking on an 8×8 ToF grid.  Every SHEETS_UPLOAD_INTERVAL_MS
-// the current occupancy snapshot is appended to a Google Sheet via the
-// Sheets API (service-account auth over WPA2-Enterprise / eduroam).
+// Multi-blob tracking on an 8×8 ToF grid.  Occupancy snapshots are appended
+// to a Google Sheet via the Sheets API (service-account auth over
+// WPA2-Enterprise / eduroam).  Uploads only occur when the doorway is clear
+// to avoid stalling the tracking pipeline.
 //
-// Hardware:  Pololu VL53L5CX carrier → ESP32-C3-DevKitM-1
-//   VIN→3V3  GND→GND  SDA→GPIO4  SCL→GPIO5  LPn→3V3  INT→GPIO6
-//   Reset button: GPIO9 → GND
+// Hardware:  Pololu VL53L5CX carrier → ESP32-C6
+//   VIN→3V3  GND→GND  SDA→GPIO6  SCL→GPIO7  LPn→3V3  INT→GPIO5
+//   SD card: CS→GPIO1  SCK→GPIO18  MOSI→GPIO19  MISO→GPIO20
+//   Reset button: GPIO3 → GND
 //
-// Board:    "ESP32C3 Dev Module"  (esp32 ≥ 2.x)
+// Board:    "ESP32C6 Dev Module"  (esp32 ≥ 3.x)
 // Libraries:
 //   SparkFun VL53L5CX Arduino Library
 //   ESP-Google-Sheet-Client  (mobizt)
@@ -49,6 +51,7 @@ void IRAM_ATTR onSensorInt() { sensorDataReady = true; }
 // ── wifi / sheets state ─────────────────────────────────────────────────────
 unsigned long lastWifiCheck   = 0;
 unsigned long lastUpload      = 0;
+unsigned long lastSDLog       = 0;
 int           reconnectFails  = 0;
 bool          wifiWasUp       = false;
 
@@ -201,14 +204,17 @@ void loop() {
         return;
     }
 
-    // ── periodic logging ────────────────────────────────────────────────────
-    if (now - lastUpload >= SHEETS_UPLOAD_INTERVAL_MS) {
+    // ── periodic logging (only when doorway is clear to avoid stalling tracking) ──
+    if (!tracker.tracking_active && now - lastUpload >= SHEETS_UPLOAD_INTERVAL_MS) {
         lastUpload = now;
         if (GSheet.ready()) appendToSheet();
-#if SD_ENABLED
-        logToSD();
-#endif
     }
+#if SD_ENABLED
+    if (!tracker.tracking_active && now - lastSDLog >= SD_LOG_INTERVAL_MS) {
+        lastSDLog = now;
+        logToSD();
+    }
+#endif
 }
 
 // ============================================================================

@@ -2,28 +2,28 @@
 #define CONFIG_H
 
 // ============================================================================
-// Pin Definitions (ESP32-C3-DevKitM-1 + Pololu VL53L5CX carrier)
+// Pin Definitions (ESP32 + Pololu VL53L5CX carrier)
 // ============================================================================
-#define SDA_PIN             4
-#define SCL_PIN             5
-#define INT_PIN             6
-#define RESET_BUTTON_PIN    9
+#define SDA_PIN             6
+#define SCL_PIN             7
+#define INT_PIN             5
+#define RESET_BUTTON_PIN    3
 
 // ============================================================================
 // SD Card (SPI) — micro SD breakout module
-//   Change these if your wiring differs. Avoid GPIO 0/1 (crystal),
-//   4/5 (I2C), 6 (INT), 8 (LOG), 9 (boot), 18/19 (USB), 20/21 (UART).
+//   Change these if your wiring differs.
 // ============================================================================
-#define SD_CS_PIN           7
-#define SD_CLK_PIN          2
-#define SD_MOSI_PIN         3
-#define SD_MISO_PIN         10
+#define SD_CS_PIN           1
+#define SD_CLK_PIN          18
+#define SD_MOSI_PIN         19
+#define SD_MISO_PIN         20
 #define SD_ENABLED          1     // set to 0 to disable SD logging entirely
 
 // ============================================================================
 // Google Sheets logging
 // ============================================================================
 #define SHEETS_UPLOAD_INTERVAL_MS  30000   // append a row every 30 s
+#define SD_LOG_INTERVAL_MS         300000  // SD backup every 5 min
 #define WIFI_CHECK_INTERVAL_MS     5000    // check eduroam link every 5 s
 #define MAX_RECONNECT_ATTEMPTS     5       // then stop retrying until next reboot
 

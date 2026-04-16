@@ -1,10 +1,10 @@
-# Occupancy Counter — VL53L5CX + ESP32-C3
+# Occupancy Counter — VL53L5CX + ESP32-C6
 
 Real-time room occupancy tracking using a ceiling-mounted time-of-flight sensor, with cloud logging to Google Sheets and a live Grafana dashboard.
 
 A VL53L5CX 8×8 multizone ToF sensor points straight down from above a doorway. At 15 Hz it produces a grid of distance readings. When someone walks through, their head and shoulders appear as a cluster of cells closer than the learned baseline. The firmware detects those clusters, tracks them across the sensor's field of view, and based on the direction of travel classifies each crossing as an **entry** or **exit**.
 
-The ESP32-C3 connects to WiFi (WPA2-Enterprise/eduroam by default, with a WPA2-PSK option for testing), logs snapshots to a Google Sheet every 30 seconds, and optionally writes daily CSV files to a micro SD card. A Grafana Cloud dashboard reads the Sheet and displays live occupancy, entries, exits, and occupancy-over-time. The device deep-sleeps outside configurable hours and restores its calibration baseline from flash on wake.
+The ESP32-C6 connects to WiFi (WPA2-Enterprise/eduroam by default, with a WPA2-PSK option for testing), logs snapshots to a Google Sheet, and optionally writes daily CSV files to a micro SD card. Uploads only happen when the doorway is clear so the tracking pipeline is never interrupted by network I/O. A Grafana Cloud dashboard reads the Sheet and displays live occupancy, entries, exits, and occupancy-over-time. The device deep-sleeps outside configurable hours and restores its calibration baseline from flash on wake.
 
 ---
 
@@ -13,17 +13,17 @@ The ESP32-C3 connects to WiFi (WPA2-Enterprise/eduroam by default, with a WPA2-P
 | Component | Role |
 |---|---|
 | **VL53L5CX** (Pololu carrier board) | 8×8 multizone time-of-flight sensor, up to 4 m range |
-| **ESP32-C3-DevKitM-1** | WiFi-capable RISC-V microcontroller running the firmware |
+| **ESP32-C6** | WiFi-capable RISC-V microcontroller running the firmware |
 | **Micro SD breakout module** | Optional local CSV logging (SPI) |
-| **Momentary push button** on GPIO9 | Hold 2 s to reset counts and clear saved baseline |
+| **Momentary push button** on GPIO3 | Hold 2 s to reset counts and clear saved baseline |
 
 ### Wiring
 
-**Sensor (I2C):** `VIN→3V3` · `GND→GND` · `SDA→GPIO4` · `SCL→GPIO5` · `LPn→3V3` · `INT→GPIO6`
+**Sensor (I2C):** `VIN→3V3` · `GND→GND` · `SDA→GPIO6` · `SCL→GPIO7` · `LPn→3V3` · `INT→GPIO5`
 
-**SD card (SPI):** `CS→GPIO7` · `CLK→GPIO2` · `MOSI→GPIO3` · `MISO→GPIO10`
+**SD card (SPI):** `CS→GPIO1` · `SCK→GPIO18` · `MOSI→GPIO19` · `MISO→GPIO20`
 
-**Reset button:** `GPIO9→GND` (uses internal pull-up)
+**Reset button:** `GPIO3→GND` (uses internal pull-up)
 
 ---
 
@@ -31,8 +31,9 @@ The ESP32-C3 connects to WiFi (WPA2-Enterprise/eduroam by default, with a WPA2-P
 
 ### Prerequisites
 
-- **Arduino IDE** or **arduino-cli** with the **ESP32** board package (≥ 2.x)
-- Board selection: **ESP32C3 Dev Module**
+- **Arduino IDE** or **arduino-cli** with the **ESP32** board package (≥ 3.x)
+- Board selection: **ESP32C6 Dev Module**
+- **USB CDC On Boot** must be **Enabled** in board settings for serial output
 
 ### Libraries
 
@@ -48,7 +49,7 @@ The ESP32-C3 connects to WiFi (WPA2-Enterprise/eduroam by default, with a WPA2-P
 2. Copy `secrets_template.h` → `secrets.h`
 3. Fill in your eduroam credentials, GCP service account, and Spreadsheet ID
 4. (Optional) To use a home WiFi network instead of eduroam, uncomment `USE_HOME_WIFI` and set `HOME_SSID` / `HOME_PASSWORD` in `secrets.h`
-5. Flash to ESP32-C3
+5. Flash to ESP32-C6
 6. Keep the doorway clear for ~2 seconds while the sensor calibrates
 
 ### Google Sheets
@@ -90,6 +91,10 @@ Each frame at ~15 Hz runs through this pipeline:
 7. **Spawn** — unmatched blobs become new tracks
 8. **Direction evaluation** — `shift = last_row − enter_row`; if the shift exceeds 1.5 rows and the track lived for ≥3 frames, the direction relative to `ENTRY_DIR` determines entry vs exit; occupancy is incremented or decremented accordingly
 
+### Idle-Only Uploads
+
+Google Sheets uploads and SD card writes only occur when `tracking_active` is false (no one in the doorway). This prevents blocking HTTPS calls from stalling the tracking pipeline and causing missed frames or false counts. Data is buffered and sent the moment the doorway clears.
+
 ### Calibration & Baseline Persistence
 
 On first boot the sensor averages 30 frames (~2 s) of the empty doorway to learn a per-cell baseline. This baseline is saved to ESP32 NVS flash. On subsequent boots (including wake from deep sleep) the baseline is restored automatically — no recalibration delay.
@@ -103,11 +108,11 @@ When `SLEEP_ENABLED` is set (default), the device:
 - At 21:30 (configurable): resets counts, uploads a final row, saves baseline to flash, stops the sensor, unmounts the SD card, turns off WiFi, and enters deep sleep
 - At 06:30 (configurable): wakes via timer, reboots, reconnects, restores baseline, and starts tracking with fresh counters
 - If it boots outside the active window, it immediately sleeps until the next wake time
-- Each sleep is capped at 1 hour for ESP32-C3 timer reliability; `setup()` re-evaluates on each wake
+- Each sleep is capped at 1 hour for timer reliability; `setup()` re-evaluates on each wake
 
 ### SD Card Logging
 
-When `SD_ENABLED` is set (default), each upload interval also writes a CSV row to `/YYYY-MM-DD.csv` on the SD card with the same data as the Google Sheet upload.
+When `SD_ENABLED` is set (default), a CSV row is written to `/YYYY-MM-DD.csv` on the SD card every 5 minutes (configurable via `SD_LOG_INTERVAL_MS`), independent of the Sheets upload interval. Like Sheets uploads, SD writes only occur when the doorway is clear.
 
 ---
 
@@ -134,14 +139,14 @@ All compile-time constants are in `config.h`.
 
 | Constant | Value | Purpose |
 |---|---|---|
-| `SDA_PIN` | 4 | I2C data |
-| `SCL_PIN` | 5 | I2C clock |
-| `INT_PIN` | 6 | Sensor interrupt (active LOW) |
-| `RESET_BUTTON_PIN` | 9 | Reset button (active LOW, internal pull-up) |
-| `SD_CS_PIN` | 7 | SD chip select |
-| `SD_CLK_PIN` | 2 | SD clock |
-| `SD_MOSI_PIN` | 3 | SD MOSI |
-| `SD_MISO_PIN` | 10 | SD MISO |
+| `SDA_PIN` | 6 | I2C data |
+| `SCL_PIN` | 7 | I2C clock |
+| `INT_PIN` | 5 | Sensor interrupt (active LOW) |
+| `RESET_BUTTON_PIN` | 3 | Reset button (active LOW, internal pull-up) |
+| `SD_CS_PIN` | 1 | SD chip select |
+| `SD_CLK_PIN` | 18 | SD clock |
+| `SD_MOSI_PIN` | 19 | SD MOSI |
+| `SD_MISO_PIN` | 20 | SD MISO |
 
 ### Sensor & Detection
 
@@ -182,11 +187,12 @@ All compile-time constants are in `config.h`.
 | `WAKE_HOUR` / `WAKE_MINUTE` | 6 / 30 | Wake at 6:30 AM |
 | `SLEEP_CHECK_INTERVAL_MS` | 30000 | Clock check interval |
 
-### Networking
+### Networking & Logging
 
 | Constant | Value | Purpose |
 |---|---|---|
-| `SHEETS_UPLOAD_INTERVAL_MS` | 30000 | Upload every 30 s |
+| `SHEETS_UPLOAD_INTERVAL_MS` | 30000 | Sheets upload every 30 s (when idle) |
+| `SD_LOG_INTERVAL_MS` | 300000 | SD backup every 5 min (when idle) |
 | `WIFI_CHECK_INTERVAL_MS` | 5000 | WiFi health check interval |
 | `MAX_RECONNECT_ATTEMPTS` | 5 | Reconnect cap per boot |
 | `NTP_SERVER` | `pool.ntp.org` | Time server |
@@ -199,7 +205,7 @@ All compile-time constants are in `config.h`.
 
 | Tag | Meaning | Example |
 |---|---|---|
-| `[INIT]` | Sensor init | `[INIT] 8x8 @ 15 Hz, INT on GPIO6` |
+| `[INIT]` | Sensor init | `[INIT] 8x8 @ 15 Hz, INT on GPIO5` |
 | `[WIFI]` | WiFi status | `[WIFI] Connected — IP 10.0.0.50  RSSI -45 dBm` |
 | `[TIME]` | NTP sync | `[TIME] NTP configured` |
 | `[AUTH]` | Sheets token | `[AUTH] OAuth2.0 access token — ready` |
@@ -218,7 +224,7 @@ All compile-time constants are in `config.h`.
 2. WiFi connects, NTP syncs, Google Sheets authenticates, SD card mounts
 3. Baseline restored from flash — tracking starts immediately
 4. Counts begin at zero for the new day
-5. Occupancy logged to Sheet + SD every 30 s; Grafana auto-refreshes
+5. Occupancy logged to Sheet every 30 s and SD every 5 min (only when doorway is clear); Grafana auto-refreshes
 6. **21:30** — counts reset, final upload, baseline saved, sensor stopped, SD unmounted, WiFi off, deep sleep
 7. Repeat
 
