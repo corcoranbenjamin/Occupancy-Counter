@@ -1,6 +1,6 @@
 # Occupancy Counter — VL53L5CX + ESP32-C6
 
-Real-time room occupancy tracking using a ceiling-mounted time-of-flight sensor, with cloud logging to Google Sheets and a live Grafana dashboard.
+Real-time room occupancy tracking using a time-of-flight sensor, with cloud logging to Google Sheets and a live Grafana dashboard.
 
 <p align="center">
   <img src="assets/web-ui.gif" alt="Live web UI showing the 8x8 sensor grid, occupancy count, entries, exits, and event log" width="720">
