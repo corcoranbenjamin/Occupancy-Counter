@@ -2,6 +2,10 @@
 
 Real-time room occupancy tracking using a ceiling-mounted time-of-flight sensor, with cloud logging to Google Sheets and a live Grafana dashboard.
 
+<p align="center">
+  <img src="assets/web-ui.gif" alt="Live web UI showing the 8x8 sensor grid, occupancy count, entries, exits, and event log" width="720">
+</p>
+
 A VL53L5CX 8×8 multizone ToF sensor points straight down from above a doorway. At 15 Hz it produces a grid of distance readings. When someone walks through, their head and shoulders appear as a cluster of cells closer than the learned baseline. The firmware detects those clusters, tracks them across the sensor's field of view, and based on the direction of travel classifies each crossing as an **entry** or **exit**.
 
 The ESP32-C6 connects to WiFi (WPA2-Enterprise/eduroam by default, with a WPA2-PSK option for testing), logs snapshots to a Google Sheet, and optionally writes daily CSV files to a micro SD card. Uploads only happen when the doorway is clear so the tracking pipeline is never interrupted by network I/O. A Grafana Cloud dashboard reads the Sheet and displays live occupancy, entries, exits, and occupancy-over-time. The device deep-sleeps outside configurable hours and restores its calibration baseline from flash on wake.
@@ -73,6 +77,10 @@ Create a Google Sheet with a tab named **Data**. Share it with your GCP service 
 | Entries | Stat | `#34D399` mint |
 | Exits | Stat | `#F87171` coral |
 | Occupancy Over Time | Time series | `#22D3EE` cyan |
+
+<p align="center">
+  <img src="assets/grafana-dashboard.gif" alt="Grafana dashboard showing live occupancy, entries, exits, and occupancy-over-time chart" width="720">
+</p>
 
 ---
 
