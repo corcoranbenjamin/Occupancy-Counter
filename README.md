@@ -128,14 +128,27 @@ When `SD_ENABLED` is set (default), a CSV row is written to `/YYYY-MM-DD.csv` on
 
 ```
 OccupancyCounter/
-├── OccupancyCounter.ino      Main sketch (setup, loop, WiFi, Sheets, SD, sleep)
-├── config.h                   All tuneable constants
-├── tracking.h                 OccupancyTracker class (algorithm + NVS persistence)
-├── secrets_template.h         Credential placeholders — copy to secrets.h
-├── grafana-dashboard.json     Importable Grafana dashboard
-├── .gitignore                 Excludes secrets.h
-└── README.md                  This file
+├── OccupancyCounter.ino       Main sketch (setup, loop, WiFi, Sheets, SD, sleep)
+├── config.h                    All tuneable constants
+├── tracking.h                  OccupancyTracker class (algorithm + NVS persistence)
+├── secrets_template.h          Credential placeholders — copy to secrets.h
+├── grafana-dashboard.json      Importable Grafana dashboard
+├── assets/                     Demo GIFs used in this README
+├── tools/
+│   └── debug-display/          Standalone debugging sketch (see below)
+├── .gitignore                  Excludes secrets.h
+└── README.md                   This file
 ```
+
+---
+
+## Debugging Tools
+
+A standalone debugging sketch lives at [`tools/debug-display/`](tools/debug-display/) for sponsors and future teams who want to validate sensor placement, watch the tracking algorithm in real time, or tune detection thresholds without setting up the full cloud stack.
+
+It runs on the same hardware as the production firmware but replaces Google Sheets and Grafana with a self-hosted WiFi access point and an in-browser visualization of the 8x8 distance grid, occupied cells, blobs, tracks, and entry/exit decisions. No `secrets.h` is required.
+
+See [`tools/debug-display/README.md`](tools/debug-display/README.md) for full instructions, and [`tools/debug-display/CODE_WALKTHROUGH.md`](tools/debug-display/CODE_WALKTHROUGH.md) for a line-by-line explanation of the tracking algorithm aimed at someone reading it for the first time.
 
 ---
 
