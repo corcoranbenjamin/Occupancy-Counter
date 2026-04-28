@@ -254,7 +254,7 @@ All compile-time constants are in `config.h`.
 ## References
 
 - [VL53L5CX Datasheet (UM2884)](https://www.st.com/resource/en/user_manual/um2884-a-guide-to-using-the-vl53l5cx-multizone-timeofflight-ranging-sensor-with-wide-field-of-view-ultra-lite-driver-uld-stmicroelectronics.pdf) — target_status codes, resolution modes
-- [VL53L5CX Ranging Guide (AN5765)](https://www.st.com/resource/en/application_note/an5765-vl53l5cx-ranging-module-user-guide-stmicroelectronics.pdf) — ranging modes, target-order, sigma/signal thresholds
+- [VL53L5CX datasheet (DS13754)](https://www.st.com/resource/en/datasheet/vl53l5cx.pdf) — module specs, FoV, range performance, power; ranging mode overview (full ULD API and output fields in UM2884 above)
 - [People-Counting App Note (UM2600)](https://www.st.com/resource/en/user_manual/um2600-counting-people-with-the-vl53l1x-longdistance-ranging-timeofflight-sensor-stmicroelectronics.pdf) — min-distance filter (§6.2); originally for VL53L1X, technique adapted here
 - [SparkFun VL53L5CX Library](https://github.com/sparkfun/SparkFun_VL53L5CX_Arduino_Library)
 - [ESP-Google-Sheet-Client](https://github.com/mobizt/ESP-Google-Sheet-Client)
